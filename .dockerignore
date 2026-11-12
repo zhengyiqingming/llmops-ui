@@ -1,0 +1,20 @@
+# 依赖包（极其重要！千万不要拷贝进容器，否则构建极慢且可能跨平台报错）
+node_modules
+
+# 打包产物（容器内会重新执行 yarn build，不需要本地打包好的）
+dist
+
+# 日志文件
+*.log
+
+# 编辑器/IDE 隐藏文件
+.idea
+.vscode
+
+# Git 相关文件
+.git
+.gitignore
+
+# 操作系统产生的垃圾文件
+.DS_Store
+Thumbs.db

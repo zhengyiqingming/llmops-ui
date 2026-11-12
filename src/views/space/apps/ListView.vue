@@ -42,8 +42,8 @@ watch(
   (newValue) => {
     if (newValue === 'app') {
       updateAppId.value = ''
-      createOrUpdateAppModalVisible.value = true
-      emits('update:create-type', '')
+      createOrUpdateAppModalVisible.value = true // 1. 打开弹窗
+      emits('update:create-type', '') // 2. 立刻通知父组件把状态重置为 ''
     }
   },
 )
@@ -57,6 +57,7 @@ watch(
   () => route.query?.create_type,
   (newValue) => {
     if (newValue === 'app') {
+      //表示需要打开创建app弹窗
       updateAppId.value = ''
       createOrUpdateAppModalVisible.value = true
     }

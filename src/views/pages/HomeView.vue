@@ -14,8 +14,8 @@ import { useAccountStore } from '@/stores/account'
 import AssistantAgentBackground from '@/assets/images/assistant-agent-background.png'
 import { Message } from '@arco-design/web-vue'
 import { QueueEvent } from '@/config'
-import HumanMessage from '@/views/space/apps/components/HumanMessage.vue'
-import AiMessage from '@/views/space/apps/components/AiMessage.vue'
+import HumanMessage from '@/components/HumanMessage.vue'
+import AiMessage from '@/components/AiMessage.vue'
 
 // 1.定义页面所需数据
 const query = ref('')
@@ -80,8 +80,7 @@ const handleSubmit = async () => {
   message_id.value = ''
   task_id.value = ''
 
-  // 5.4 往消息列表中添加基础人类消息,unshift 是往数组的头部（开头）添加元素。
-  // messages.value.unshift(...)：在数组第 0 个位置插入，原有元素全部后移一位，新元素排在最前面。
+  // 5.4 往消息列表中添加基础人类消息,unshift 是往数组的头部（开头）添加元素。messages.value.unshift(...)：在数组第 0 个位置插入，原有元素全部后移一位，新元素排在最前面。
   messages.value.unshift({
     id: '',
     conversation_id: '',
@@ -104,14 +103,14 @@ const handleSubmit = async () => {
     const event = event_response?.event
     const data = event_response?.data
     const event_id = data?.id
-    let agent_thoughts = messages.value[0].agent_thoughts
+    const agent_thoughts = messages.value[0]!.agent_thoughts
 
     // 5.8 初始化数据检测与赋值
     if (message_id.value === '' && data?.message_id) {
       task_id.value = data?.task_id
       message_id.value = data?.message_id
-      messages.value[0].id = data?.message_id
-      messages.value[0].conversation_id = data?.conversation_id
+      messages.value[0]!.id = data?.message_id
+      messages.value[0]!.conversation_id = data?.conversation_id
     }
 
     // 5.9 循环处理得到的事件，记录除ping之外的事件
@@ -141,13 +140,19 @@ const handleSubmit = async () => {
             ...agent_thoughts[agent_thought_idx],
             thought: agent_thoughts[agent_thought_idx]?.thought + data?.thought,
             latency: data?.latency,
-          }
+          } as any
         }
 
         // 5.14 更新/添加answer答案
-        messages.value[0].answer += data?.thought
-        messages.value[0].latency = data?.latency
-        messages.value[0].total_token_count = data?.total_token_count
+        messages.value[0]!.answer += data?.thought
+        messages.value[0]!.latency = data?.latency
+        messages.value[0]!.total_token_count = data?.total_token_count
+      } else if (event === QueueEvent.error) {
+        // 5.15 事件为error，将错误信息（observation）填充到消息答案中进行展示
+        messages.value[0]!.answer = data?.observation
+      } else if (event === QueueEvent.timeout) {
+        // 5.16 事件为timeout，则人工提示超时信息
+        messages.value[0]!.answer = '当前Agent执行已超时，无法得到答案，请重试'
       } else {
         // 5.15 处理其他类型的事件，直接填充覆盖数据
         position += 1
@@ -165,15 +170,17 @@ const handleSubmit = async () => {
       }
 
       // 5.16 更新agent_thoughts
-      messages.value[0].agent_thoughts = agent_thoughts
+      messages.value[0]!.agent_thoughts = agent_thoughts
 
       scroller.value.scrollToBottom()
     }
   })
 
   // 5.7 发起API请求获取建议问题列表
-  await handleGenerateSuggestedQuestions(message_id.value)
-  setTimeout(() => scroller.value && scroller.value.scrollToBottom(), 100)
+  if (message_id.value) {
+    await handleGenerateSuggestedQuestions(message_id.value)
+    setTimeout(() => scroller.value && scroller.value.scrollToBottom(), 100)
+  }
 }
 
 // 6.定义停止调试会话函数
@@ -194,7 +201,7 @@ const handleSubmitQuestion = async (question: string) => {
   await handleSubmit()
 }
 
-// 6.页面DOM加载完毕时初始化数据
+// 8.页面DOM加载完毕时初始化数据
 onMounted(async () => {
   await loadAssistantAgentMessages(true)
   await nextTick(() => {
@@ -225,7 +232,7 @@ onMounted(async () => {
           @scroll="handleScroll"
           class="h-full scrollbar-w-none"
         >
-          <template v-slot="{ item, index, active }">
+          <template v-slot="{ item, active }">
             <dynamic-scroller-item :item="item" :active="active" :data-index="item.id">
               <div class="flex flex-col gap-6 py-6">
                 <human-message :query="item.query" :account="accountStore.account" />
@@ -382,8 +389,6 @@ onMounted(async () => {
           内容由AI生成，无法确保真实准确，仅供参考。
         </div>
       </div>
-      <!-- 顶部提示信息 -->
-      <!-- 空页面对话开场白 -->
     </div>
   </div>
 </template>

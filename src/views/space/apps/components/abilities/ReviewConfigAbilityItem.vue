@@ -1,12 +1,18 @@
 <script setup lang="ts">
 import { cloneDeep, isEqual } from 'lodash'
 import { nextTick, ref, watch } from 'vue'
-import { useUpdateDraftAppConfig } from '@/hooks/use-app.ts'
+import { useUpdateDraftAppConfig } from '@/hooks/use-app'
 
 // 1.定义自定义组件所需数据
 const props = defineProps({
   app_id: { type: String, default: '', required: true },
-  review_config: { type: Object, default: {}, required: true },
+  review_config: {
+    type: Object,
+    default: () => {
+      return {}
+    },
+    required: true,
+  },
 })
 const { loading, handleUpdateDraftAppConfig } = useUpdateDraftAppConfig()
 const isInit = ref(false)
@@ -40,26 +46,25 @@ const handleCancelReviewConfigModal = () => {
 
 // 4.提交审核配置模态窗存储的内容
 const handleSubmitReviewConfig = async () => {
-  try {
-    // 4.1 处理数据并完成API接口提交
-    await handleUpdateDraftAppConfig(props.app_id, {
-      review_config: {
-        enable: reviewConfigForm.value.enable,
-        keywords: reviewConfigForm.value.keywords
-          .split(/\r?\n/)
-          .filter((item: string) => item.trim() !== ''),
-        inputs_config: reviewConfigForm.value.inputs_config,
-        outputs_config: reviewConfigForm.value.outputs_config,
-      },
-    })
+  // 4.1 处理数据并完成API接口提交
+  await handleUpdateDraftAppConfig(props.app_id, {
+    review_config: {
+      enable: reviewConfigForm.value.enable,
+      keywords: reviewConfigForm.value.keywords
+        .split(/\r?\n/)
+        .filter((item: string) => item.trim() !== ''),
+      inputs_config: reviewConfigForm.value.inputs_config,
+      outputs_config: reviewConfigForm.value.outputs_config,
+    },
+  })
 
-    // 4.2 接口更新更新成功，同步表单信息
-    originReviewConfigForm.value = cloneDeep(reviewConfigForm.value)
-    await nextTick() // 确保数据完成更新，才能隐藏模态窗
+  // 4.2 接口更新更新成功，同步表单信息
+  originReviewConfigForm.value = cloneDeep(reviewConfigForm.value)
+  // 确保数据完成更新，才能隐藏模态窗
+  await nextTick()
 
-    // 4.3 隐藏模态窗
-    handleCancelReviewConfigModal()
-  } catch (e) {}
+  // 4.3 隐藏模态窗
+  handleCancelReviewConfigModal()
 }
 
 // 5.监听review_config变化并同步到表单
@@ -81,7 +86,8 @@ watch(
       }
     }
   },
-  { immediate: true, deep: true }, //参数：immediate 立即执行；deep 深度监听
+  //参数：immediate 立即执行；deep 深度监听
+  { immediate: true, deep: true },
 )
 </script>
 
@@ -94,7 +100,7 @@ watch(
       <template #extra>
         <a-dropdown
           @select="
-            async (value) => {
+            async (value: any) => {
               if (Boolean(value) !== reviewConfigForm.enable) {
                 try {
                   //1.修改表单数据并确保数据同步
@@ -179,8 +185,8 @@ watch(
               :word-length="
                 (value) => {
                   if (value.trim() === '') return 0
-                  return value.split(/\r?\n/)
-                    .length /* \r?‌：匹配 0 次或 1 次回车符，即该字符可有可无；\n‌：必须匹配一个换行符； */
+                  // \r?‌：匹配 0 次或 1 次回车符，即该字符可有可无；\n‌：必须匹配一个换行符；
+                  return value.split(/\r?\n/).length
                 }
               "
               :word-slice="

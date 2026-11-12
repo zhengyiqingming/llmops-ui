@@ -490,7 +490,7 @@ export const useCreateDocuments = () => {
     try {
       loading.value = true
       const resp = await createDocuments(dataset_id, req)
-      create_documents_result.value = resp.data
+      create_documents_result.value = (resp as any).data
     } finally {
       loading.value = false
     }

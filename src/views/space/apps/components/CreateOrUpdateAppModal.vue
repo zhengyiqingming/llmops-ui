@@ -111,7 +111,7 @@ watch(
             v-model:file-list="form.fileList"
             image-preview
             :custom-request="
-              (option) => {
+              (option: any) => {
                 // 1.从option中提取数据，fileItem、onSuccess、onError 都是 Arco Design 的 a-upload 组件在 custom-request 回调中提供的内置参数。
                 const { fileItem, onSuccess, onError } = option
 

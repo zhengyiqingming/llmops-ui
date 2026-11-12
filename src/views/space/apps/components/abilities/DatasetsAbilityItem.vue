@@ -89,9 +89,9 @@ const handleSelectDataset = (idx: number) => {
   const dataset = apiDatasets.value[idx]
 
   // 7.2 检测id是否选中，如果是选中则删除
-  if (activateDatasets.value.some((activateDataset) => activateDataset.id === dataset.id)) {
+  if (activateDatasets.value.some((activateDataset) => activateDataset.id === dataset?.id)) {
     activateDatasets.value = activateDatasets.value.filter(
-      (activateDataset) => activateDataset.id !== dataset.id,
+      (activateDataset) => activateDataset.id !== dataset?.id,
     )
   } else {
     // 7.3 检测已关联的知识库数量
@@ -101,10 +101,10 @@ const handleSelectDataset = (idx: number) => {
     }
     // 7.4 添加数据到激活知识库列表
     activateDatasets.value.push({
-      id: dataset.id,
-      name: dataset.name,
-      icon: dataset.icon,
-      description: dataset.description,
+      id: dataset?.id,
+      name: dataset?.name,
+      icon: dataset?.icon,
+      description: dataset?.description,
     })
   }
 }

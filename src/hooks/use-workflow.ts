@@ -1,7 +1,6 @@
 import { ref } from 'vue'
 import type {
   CreateWorkflowRequest,
-  GetDraftGraphResponse,
   GetWorkflowsWithPageResponse,
   UpdateDraftGraphRequest,
   UpdateWorkflowRequest,
@@ -172,7 +171,6 @@ export const useDeleteWorkflow = () => {
 export const useGetDraftGraph = () => {
   // 1.定义hooks所需数据
   const loading = ref(false)
-  // ✅ 使用 Vue Flow 的 Node 和 Edge 类型
   const nodes = ref<any[]>([])
   const edges = ref<any[]>([])
 
@@ -186,22 +184,15 @@ export const useGetDraftGraph = () => {
 
       // 4.处理节点数据并赋值
       nodes.value = data.nodes.map((node) => {
-        // 5.将 node_type 重命名为 type，并将其他未提取的字段统一放入 data 属性中,...data：收集剩余的所有属性（这是一个“剩余参数”/“展开剩余”语法）
+        // 5.删除不传递的数据并构建新节点数据存储到data中
         const { id, node_type: type, position, ...data } = node
         return { id, type, position, data }
       })
 
-      // 6.处理边数据 添加动画:animated: true，并设置边的粗细+颜色
-      // ✅ 明确返回 Edge 类型
+      // 6.处理边数据
       edges.value = data.edges.map((edge) => {
-        return {
-          ...edge,
-          id: edge.id || `edge-${Date.now()}-${Math.random()}`, // 确保有 id
-          source: edge.source,
-          target: edge.target,
-          animated: true,
-          style: { strokeWidth: 2, stroke: '#9ca3af' },
-        }
+        // 7.添加动画，并设置边的粗细+颜色
+        return { ...edge, animated: true, style: { strokeWidth: 2, stroke: '#9ca3af' } }
       })
     } finally {
       loading.value = false

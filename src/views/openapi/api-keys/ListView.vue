@@ -180,7 +180,9 @@ watch(
                   (value) => {
                     handleUpdateApiKeyIsActive(record.id, value as boolean, () => {
                       // 更新对应记录的状态文字描述
-                      api_keys[rowIndex].is_active = Boolean(value)
+                      if (api_keys[rowIndex]) {
+                        api_keys[rowIndex].is_active = Boolean(value)
+                      }
                     })
                   }
                 "

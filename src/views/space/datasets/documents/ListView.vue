@@ -250,7 +250,7 @@ onMounted(() => {
                         value as boolean,
                         () => {
                           // 更新对应记录的状态文字描述
-                          documents[rowIndex].enabled = value
+                          documents[rowIndex]!.enabled = value
                         },
                       )
                     }

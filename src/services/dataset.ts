@@ -48,7 +48,7 @@ export const updateDataset = (dataset_id: string, req: UpdateDatasetRequest) => 
 
 //删除知识库请求
 export const deleteDataset = (dataset_id: string) => {
-  return post<BaseResponse<any>>(`/datasets/${dataset_id}/delete`)
+  return post<BaseResponse<any>>(`/datasets/${dataset_id}/delete`, {})
 }
 
 //获取知识库详情
@@ -88,7 +88,7 @@ export const updateDocumentEnabled = (
 
 //删除指定文档信息
 export const deleteDocument = (dataset_id: string, document_id: string) => {
-  return post<BaseResponse<any>>(`/datasets/${dataset_id}/documents/${document_id}/delete`)
+  return post<BaseResponse<any>>(`/datasets/${dataset_id}/documents/${document_id}/delete`, {})
 }
 
 //更新文档名称
@@ -151,6 +151,7 @@ export const createSegment = (
 export const deleteSegment = (dataset_id: string, document_id: string, segment_id: string) => {
   return post<BaseResponse<any>>(
     `/datasets/${dataset_id}/documents/${document_id}/segments/${segment_id}/delete`,
+    {},
   )
 }
 

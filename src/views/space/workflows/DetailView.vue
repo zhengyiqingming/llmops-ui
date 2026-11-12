@@ -1,8 +1,9 @@
 <script setup lang="ts">
+import { v4 } from 'uuid'
 import { markRaw, onMounted, ref } from 'vue'
 import moment from 'moment/moment'
 import { useRoute } from 'vue-router'
-import { ConnectionMode, type Edge, useVueFlow, VueFlow } from '@vue-flow/core'
+import { ConnectionMode, Panel, useVueFlow, VueFlow } from '@vue-flow/core'
 import { Background } from '@vue-flow/background'
 import { MiniMap } from '@vue-flow/minimap'
 import dagre from 'dagre'
@@ -13,7 +14,7 @@ import {
   useGetWorkflow,
   usePublishWorkflow,
   useUpdateDraftGraph,
-} from '@/hooks/use-workflow.ts'
+} from '@/hooks/use-workflow'
 import StartNode from './components/nodes/StartNode.vue'
 import LlmNode from './components/nodes/LLMNode.vue'
 import DatasetRetrievalNode from './components/nodes/DatasetRetrievalNode.vue'
@@ -25,17 +26,18 @@ import EndNode from './components/nodes/EndNode.vue'
 import DebugModal from './components/DebugModal.vue'
 import StartNodeInfo from './components/infos/StartNodeInfo.vue'
 import LlmNodeInfo from './components/infos/LLMNodeInfo.vue'
-import TemplateTransformNodeInfo from '@/views/space/workflows/components/infos/TemplateTransformNodeInfo.vue'
-import CodeNodeInfo from '@/views/space/workflows/components/infos/CodeNodeInfo.vue'
-import HttpRequestNodeInfo from './components/infos/HttpRequestNodeInfo.vue'
-import DatasetRetrievalNodeInfo from './components/infos/DatasetRetrievalNodeInfo.vue'
-import ToolNodeInfo from './components/infos/ToolNodeInfo.vue'
-import EndNodeInfo from './components/infos/EndNodeInfo.vue'
 import '@vue-flow/core/dist/style.css'
 import '@vue-flow/core/dist/theme-default.css'
 import '@vue-flow/minimap/dist/style.css'
 import { Message } from '@arco-design/web-vue'
-import { generateRandomString } from '@/utils/helper.ts'
+import { generateRandomString } from '@/utils/helper'
+import TemplateTransformNodeInfo from '@/views/space/workflows/components/infos/TemplateTransformNodeInfo.vue'
+import CodeNodeInfo from '@/views/space/workflows/components/infos/CodeNodeInfo.vue'
+import HttpRequestNodeInfo from '@/views/space/workflows/components/infos/HttpRequestNodeInfo.vue'
+import DatasetRetrievalNodeInfo from '@/views/space/workflows/components/infos/DatasetRetrievalNodeInfo.vue'
+import ToolNodeInfo from '@/views/space/workflows/components/infos/ToolNodeInfo.vue'
+import EndNodeInfo from '@/views/space/workflows/components/infos/EndNodeInfo.vue'
+
 //1. 定义页面所需数据
 const route = useRoute()
 const instance = ref<any>(null)
@@ -169,7 +171,7 @@ const {
   convertGraphToReq,
   handleUpdateDraftGraph,
 } = useUpdateDraftGraph()
-const { loading: getDraftGraphLoading, nodes, edges, loadDraftGraph } = useGetDraftGraph()
+const { nodes, edges, loadDraftGraph } = useGetDraftGraph()
 const { loading: publishWorkflowLoading, handlePublishWorkflow } = usePublishWorkflow()
 const { handleCancelPublish } = useCancelPublishWorkflow()
 //2.定义自适应布局处理器
@@ -249,7 +251,7 @@ const addNode = (node_type: string) => {
 
   // 3.6 添加节点数据
   nodes.value.push({
-    id: crypto.randomUUID(),
+    id: v4(),
     type: node_type,
     position: { x: xAverage, y: yAverage },
     data: {
@@ -274,7 +276,7 @@ const onChange = () => {
 // 定义节点更新事件
 const onUpdateNode = (node_data: Record<string, any>) => {
   // 获取该节点对应的索引
-  const idx = nodes.value.findIndex((item) => item.id === node_data.id)
+  const idx = nodes.value.findIndex((item: any) => item.id === node_data.id)
 
   // 检测是否存在数据，如果存在则更新
   if (idx !== -1) {
@@ -323,7 +325,7 @@ onConnect((connection) => {
   // 将数据添加到edges
   edges.value.push({
     ...connection,
-    id: crypto.randomUUID(),
+    id: v4(),
     source_type: source_node?.type,
     target_type: target_node?.type,
     animated: true, //动画
@@ -332,13 +334,13 @@ onConnect((connection) => {
 })
 
 // 工作流面板点击hooks
-onPaneClick((mouseEvent) => {
+onPaneClick(() => {
   isDebug.value = false
   selectedNode.value = null
 })
 
 // 工作流Edge边点击hooks
-onEdgeClick((edgeMouseEvent) => {
+onEdgeClick(() => {
   isDebug.value = false
   selectedNode.value = null
 })
@@ -346,7 +348,7 @@ onEdgeClick((edgeMouseEvent) => {
 //工作流Node点击hooks
 onNodeClick((nodeMouseEvent) => {
   //限制每个节点只能点击一次，点击的时候将节点的数据赋值给selectedNode
-  if (!selectedNode.value || selectedNode.value?.id == nodeMouseEvent.node.id) {
+  if (!selectedNode.value || selectedNode.value?.id !== nodeMouseEvent.node.id) {
     selectedNode.value = nodeMouseEvent.node
     nodeInfoVisible.value = true
   }
@@ -355,7 +357,7 @@ onNodeClick((nodeMouseEvent) => {
 })
 
 //工作流节点拖动停止hooks
-onNodeDragStop((nodeDragEvent) => {
+onNodeDragStop(() => {
   handleUpdateDraftGraph(
     String(route.params?.workflow_id ?? ''),
     convertGraphToReq(nodes.value, edges.value),
@@ -491,202 +493,215 @@ onMounted(async () => {
           zoomable
         />
         <!-- 使用默认插槽添加工具菜单 -->
-        <div
-          class="absolute bottom-6 left-1/2 transform -translate-x-1/2 p-[5px] bg-white rounded-xl border z-50"
-        >
-          <a-space :size="8">
-            <template #split>
-              <a-divider direction="vertical" class="m-0" />
-            </template>
-            <!-- 添加节点 -->
-            <a-trigger position="top" :popup-translate="[0, -16]">
-              <a-button type="primary" size="small" class="rounded-lg px-2">
-                <template #icon>
-                  <icon-plus-circle-fill />
-                </template>
-                节点
-              </a-button>
-              <template #content>
-                <div
-                  class="bg-white borer border-gray-200 w-[240px] shadow rounded-xl overflow-hidden py-2"
-                >
-                  <!-- 开始节点 -->
-                  <div
-                    class="flex flex-col px-3 py-2 gap-2 cursor-pointer hover:bg-gray-50"
-                    @click="() => addNode('start')"
-                  >
-                    <!-- 节点名称 -->
-                    <div class="flex items-center gap-2">
-                      <a-avatar shape="square" :size="24" class="bg-blue-700 rounded-lg">
-                        <icon-home />
-                      </a-avatar>
-                      <div class="text-gray-700 font-semibold">开始节点</div>
-                    </div>
-                    <!-- 节点描述 -->
-                    <div class="text-gray-500 text-xs">
-                      工作流的起始节点，支持定义工作流的起点输入等信息。
-                    </div>
-                  </div>
-                  <!-- 大语言模型节点 -->
-                  <div
-                    class="flex flex-col px-3 py-2 gap-2 cursor-pointer hover:bg-gray-50"
-                    @click="() => addNode('llm')"
-                  >
-                    <!-- 节点名称 -->
-                    <div class="flex items-center gap-2">
-                      <a-avatar shape="square" :size="24" class="bg-sky-500 rounded-lg">
-                        <icon-language />
-                      </a-avatar>
-                      <div class="text-gray-700 font-semibold">大语言模型</div>
-                    </div>
-                    <!-- 节点描述 -->
-                    <div class="text-gray-500 text-xs">
-                      调用大语言模型，根据输入参数和提示词生成回复
-                    </div>
-                  </div>
-                  <!-- 扩展插件 -->
-                  <div
-                    class="flex flex-col px-3 py-2 gap-2 cursor-pointer hover:bg-gray-50"
-                    @click="() => addNode('tool')"
-                  >
-                    <!-- 节点名称 -->
-                    <div class="flex items-center gap-2">
-                      <a-avatar shape="square" :size="24" class="bg-orange-500 rounded-lg">
-                        <icon-tool />
-                      </a-avatar>
-                      <div class="text-gray-700 font-semibold">扩展插件</div>
-                    </div>
-                    <!-- 节点描述 -->
-                    <div class="text-gray-500 text-xs">
-                      添加插件广场内或自定义API插件，支持能力扩展和复用。
-                    </div>
-                  </div>
-                  <!-- 知识库检索 -->
-                  <div
-                    class="flex flex-col px-3 py-2 gap-2 cursor-pointer hover:bg-gray-50"
-                    @click="() => addNode('dataset_retrieval')"
-                  >
-                    <!-- 节点名称 -->
-                    <div class="flex items-center gap-2">
-                      <a-avatar shape="square" :size="24" class="bg-violet-500 rounded-lg">
-                        <icon-storage />
-                      </a-avatar>
-                      <div class="text-gray-700 font-semibold">知识库检索</div>
-                    </div>
-                    <!-- 节点描述 -->
-                    <div class="text-gray-500 text-xs">
-                      根据输入的参数，在选定的知识库中检索相关片段并召回，返回切片列表。
-                    </div>
-                  </div>
-                  <!-- 模板转换 -->
-                  <div
-                    class="flex flex-col px-3 py-2 gap-2 cursor-pointer hover:bg-gray-50"
-                    @click="() => addNode('template_transform')"
-                  >
-                    <!-- 节点名称 -->
-                    <div class="flex items-center gap-2">
-                      <a-avatar shape="square" :size="24" class="bg-emerald-400 rounded-lg">
-                        <icon-branch />
-                      </a-avatar>
-                      <div class="text-gray-700 font-semibold">模板转换</div>
-                    </div>
-                    <!-- 节点描述 -->
-                    <div class="text-gray-500 text-xs">对多个字符串变量的格式进行处理。</div>
-                  </div>
-                  <!-- HTTP请求 -->
-                  <div
-                    class="flex flex-col px-3 py-2 gap-2 cursor-pointer hover:bg-gray-50"
-                    @click="() => addNode('http_request')"
-                  >
-                    <!-- 节点名称 -->
-                    <div class="flex items-center gap-2">
-                      <a-avatar shape="square" :size="24" class="bg-rose-500 rounded-lg">
-                        <icon-link />
-                      </a-avatar>
-                      <div class="text-gray-700 font-semibold">HTTP请求</div>
-                    </div>
-                    <!-- 节点描述 -->
-                    <div class="text-gray-500 text-xs">配置外部API服务，并发起请求。</div>
-                  </div>
-                  <!-- Python代码执行 -->
-                  <div
-                    class="flex flex-col px-3 py-2 gap-2 cursor-pointer hover:bg-gray-50"
-                    @click="() => addNode('code')"
-                  >
-                    <!-- 节点名称 -->
-                    <div class="flex items-center gap-2">
-                      <a-avatar shape="square" :size="24" class="bg-cyan-500 rounded-lg">
-                        <icon-code />
-                      </a-avatar>
-                      <div class="text-gray-700 font-semibold">Python代码执行</div>
-                    </div>
-                    <!-- 节点描述 -->
-                    <div class="text-gray-500 text-xs">编写代码处理输入输出变量来生成返回值。</div>
-                  </div>
-                  <!-- 结束节点 -->
-                  <div
-                    class="flex flex-col px-3 py-2 gap-2 cursor-pointer hover:bg-gray-50"
-                    @click="() => addNode('end')"
-                  >
-                    <!-- 节点名称 -->
-                    <div class="flex items-center gap-2">
-                      <a-avatar shape="square" :size="24" class="bg-red-700 rounded-lg">
-                        <icon-filter />
-                      </a-avatar>
-                      <div class="text-gray-700 font-semibold">结束节点</div>
-                    </div>
-                    <!-- 节点描述 -->
-                    <div class="text-gray-500 text-xs">
-                      工作流的结束节点，支持定义工作流最终输出的变量等信息。
-                    </div>
-                  </div>
-                </div>
+        <panel position="bottom-center">
+          <div class="p-[5px] bg-white rounded-xl border z-50">
+            <a-space :size="8">
+              <template #split>
+                <a-divider direction="vertical" class="m-0" />
               </template>
-            </a-trigger>
-            <!-- 自适应布局&视口大小 -->
-            <div class="flex items-center gap-3">
-              <a-tooltip content="自适应布局">
-                <a-button
-                  size="small"
-                  type="text"
-                  class="!text-gray-700 rounded-lg"
-                  @click="() => autoLayout()"
-                >
+              <!-- 添加节点 -->
+              <a-trigger position="top" :popup-translate="[0, -16]">
+                <a-button type="primary" size="small" class="rounded-lg px-2">
                   <template #icon>
-                    <icon-apps />
+                    <icon-plus-circle-fill />
                   </template>
+                  节点
                 </a-button>
-              </a-tooltip>
-              <a-dropdown
-                trigger="hover"
-                @select="
-                  (value: any) => {
-                    // 调整视口大小并更新视口等级
-                    zoomLevel = Number(value)
-                    instance.zoomTo(value)
+                <template #content>
+                  <div
+                    class="bg-white borer border-gray-200 w-[240px] shadow rounded-xl overflow-hidden py-2"
+                  >
+                    <!-- 开始节点 -->
+                    <div
+                      class="flex flex-col px-3 py-2 gap-2 cursor-pointer hover:bg-gray-50"
+                      @click="() => addNode('start')"
+                    >
+                      <!-- 节点名称 -->
+                      <div class="flex items-center gap-2">
+                        <a-avatar shape="square" :size="24" class="bg-blue-700 rounded-lg">
+                          <icon-home />
+                        </a-avatar>
+                        <div class="text-gray-700 font-semibold">开始节点</div>
+                      </div>
+                      <!-- 节点描述 -->
+                      <div class="text-gray-500 text-xs">
+                        工作流的起始节点，支持定义工作流的起点输入等信息。
+                      </div>
+                    </div>
+                    <!-- 大语言模型节点 -->
+                    <div
+                      class="flex flex-col px-3 py-2 gap-2 cursor-pointer hover:bg-gray-50"
+                      @click="() => addNode('llm')"
+                    >
+                      <!-- 节点名称 -->
+                      <div class="flex items-center gap-2">
+                        <a-avatar shape="square" :size="24" class="bg-sky-500 rounded-lg">
+                          <icon-language />
+                        </a-avatar>
+                        <div class="text-gray-700 font-semibold">大语言模型</div>
+                      </div>
+                      <!-- 节点描述 -->
+                      <div class="text-gray-500 text-xs">
+                        调用大语言模型，根据输入参数和提示词生成回复
+                      </div>
+                    </div>
+                    <!-- 扩展插件 -->
+                    <div
+                      class="flex flex-col px-3 py-2 gap-2 cursor-pointer hover:bg-gray-50"
+                      @click="() => addNode('tool')"
+                    >
+                      <!-- 节点名称 -->
+                      <div class="flex items-center gap-2">
+                        <a-avatar shape="square" :size="24" class="bg-orange-500 rounded-lg">
+                          <icon-tool />
+                        </a-avatar>
+                        <div class="text-gray-700 font-semibold">扩展插件</div>
+                      </div>
+                      <!-- 节点描述 -->
+                      <div class="text-gray-500 text-xs">
+                        添加插件广场内或自定义API插件，支持能力扩展和复用。
+                      </div>
+                    </div>
+                    <!-- 知识库检索 -->
+                    <div
+                      class="flex flex-col px-3 py-2 gap-2 cursor-pointer hover:bg-gray-50"
+                      @click="() => addNode('dataset_retrieval')"
+                    >
+                      <!-- 节点名称 -->
+                      <div class="flex items-center gap-2">
+                        <a-avatar shape="square" :size="24" class="bg-violet-500 rounded-lg">
+                          <icon-storage />
+                        </a-avatar>
+                        <div class="text-gray-700 font-semibold">知识库检索</div>
+                      </div>
+                      <!-- 节点描述 -->
+                      <div class="text-gray-500 text-xs">
+                        根据输入的参数，在选定的知识库中检索相关片段并召回，返回切片列表。
+                      </div>
+                    </div>
+                    <!-- 模板转换 -->
+                    <div
+                      class="flex flex-col px-3 py-2 gap-2 cursor-pointer hover:bg-gray-50"
+                      @click="() => addNode('template_transform')"
+                    >
+                      <!-- 节点名称 -->
+                      <div class="flex items-center gap-2">
+                        <a-avatar shape="square" :size="24" class="bg-emerald-400 rounded-lg">
+                          <icon-branch />
+                        </a-avatar>
+                        <div class="text-gray-700 font-semibold">模板转换</div>
+                      </div>
+                      <!-- 节点描述 -->
+                      <div class="text-gray-500 text-xs">对多个字符串变量的格式进行处理。</div>
+                    </div>
+                    <!-- HTTP请求 -->
+                    <div
+                      class="flex flex-col px-3 py-2 gap-2 cursor-pointer hover:bg-gray-50"
+                      @click="() => addNode('http_request')"
+                    >
+                      <!-- 节点名称 -->
+                      <div class="flex items-center gap-2">
+                        <a-avatar shape="square" :size="24" class="bg-rose-500 rounded-lg">
+                          <icon-link />
+                        </a-avatar>
+                        <div class="text-gray-700 font-semibold">HTTP请求</div>
+                      </div>
+                      <!-- 节点描述 -->
+                      <div class="text-gray-500 text-xs">配置外部API服务，并发起请求。</div>
+                    </div>
+                    <!-- Python代码执行 -->
+                    <div
+                      class="flex flex-col px-3 py-2 gap-2 cursor-pointer hover:bg-gray-50"
+                      @click="() => addNode('code')"
+                    >
+                      <!-- 节点名称 -->
+                      <div class="flex items-center gap-2">
+                        <a-avatar shape="square" :size="24" class="bg-cyan-500 rounded-lg">
+                          <icon-code />
+                        </a-avatar>
+                        <div class="text-gray-700 font-semibold">Python代码执行</div>
+                      </div>
+                      <!-- 节点描述 -->
+                      <div class="text-gray-500 text-xs">
+                        编写代码处理输入输出变量来生成返回值。
+                      </div>
+                    </div>
+                    <!-- 结束节点 -->
+                    <div
+                      class="flex flex-col px-3 py-2 gap-2 cursor-pointer hover:bg-gray-50"
+                      @click="() => addNode('end')"
+                    >
+                      <!-- 节点名称 -->
+                      <div class="flex items-center gap-2">
+                        <a-avatar shape="square" :size="24" class="bg-red-700 rounded-lg">
+                          <icon-filter />
+                        </a-avatar>
+                        <div class="text-gray-700 font-semibold">结束节点</div>
+                      </div>
+                      <!-- 节点描述 -->
+                      <div class="text-gray-500 text-xs">
+                        工作流的结束节点，支持定义工作流最终输出的变量等信息。
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </a-trigger>
+              <!-- 自适应布局&视口大小 -->
+              <div class="flex items-center gap-3">
+                <a-tooltip content="自适应布局">
+                  <a-button
+                    size="small"
+                    type="text"
+                    class="!text-gray-700 rounded-lg"
+                    @click="() => autoLayout()"
+                  >
+                    <template #icon>
+                      <icon-apps />
+                    </template>
+                  </a-button>
+                </a-tooltip>
+                <a-dropdown
+                  trigger="hover"
+                  @select="
+                    (value: any) => {
+                      // 调整视口大小并更新视口等级
+                      zoomLevel = Number(value)
+                      instance.zoomTo(value)
+                    }
+                  "
+                >
+                  <a-button size="small" class="!text-gray-700 px-2 rounded-lg gap-1 w-[80px]">
+                    {{ (zoomLevel * 100).toFixed(0) }}%
+                    <icon-down />
+                  </a-button>
+                  <template #content>
+                    <a-doption v-for="zoom in zoomOptions" :key="zoom.value" :value="zoom.value">
+                      {{ zoom.label }}
+                    </a-doption>
+                  </template>
+                </a-dropdown>
+              </div>
+              <!-- 调试与预览 -->
+              <a-button
+                type="text"
+                size="small"
+                class="px-2 rounded-lg"
+                @click="
+                  () => {
+                    //清空当前选中节点，并设置调试模式
+                    selectedNode = null
+                    isDebug = true
                   }
                 "
               >
-                <a-button size="small" class="!text-gray-700 px-2 rounded-lg gap-1 w-[80px]">
-                  {{ (zoomLevel * 100).toFixed(0) }}%
-                  <icon-down />
-                </a-button>
-                <template #content>
-                  <a-doption v-for="zoom in zoomOptions" :key="zoom.value" :value="zoom.value">
-                    {{ zoom.label }}
-                  </a-doption>
+                <template #icon>
+                  <icon-play-arrow />
                 </template>
-              </a-dropdown>
-            </div>
-            <!-- 调试与预览 -->
-            <a-button type="text" size="small" class="px-2 rounded-lg" @click="isDebug = true">
-              <template #icon>
-                <icon-play-arrow />
-              </template>
-              调试
-            </a-button>
-          </a-space>
-        </div>
+                调试
+              </a-button>
+            </a-space>
+          </div>
+        </panel>
         <!--  调试与预览窗口:workflow_id 是单向数据流,父组件计算出的workflow_id字符串会传递给子组件的workflow_id  -->
         <debug-modal
           :workflow_id="String(route.params?.workflow_id ?? '')"

@@ -7,7 +7,9 @@ const props = defineProps({
   app_id: { type: String, default: '', required: true },
   long_term_memory: {
     type: Object as PropType<{ enable: boolean }>,
-    default: { enable: false },
+    default: () => {
+      return { enable: false }
+    },
     required: true,
   },
 })
@@ -24,7 +26,7 @@ const { handleUpdateDraftAppConfig } = useUpdateDraftAppConfig()
       <template #extra>
         <a-dropdown
           @select="
-            async (value) => {
+            async (value: any) => {
               if (Boolean(value) !== props.long_term_memory?.enable) {
                 emits('update:long_term_memory', { enable: Boolean(value) })
                 await handleUpdateDraftAppConfig(props.app_id, {

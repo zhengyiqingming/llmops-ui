@@ -177,7 +177,7 @@ const handleCancel = () => {
   formRef.value?.resetFields()
 
   // 2.隐藏表单模态窗
-  emits('update:create-type', '')
+  emits('update:create-type', '') //修改父组件的create-type
   showUpdateModal.value = false
 }
 
@@ -384,7 +384,7 @@ watch(
               v-model:file-list="form.fileList"
               image-preview
               :custom-request="
-                (option) => {
+                (option: any) => {
                   const uploadTask = async () => {
                     const { fileItem, onSuccess, onError } = option
                     await handleUploadImage(fileItem.file as File)
@@ -398,7 +398,7 @@ watch(
                 }
               "
               :on-before-remove="
-                async (fileItem) => {
+                async (fileItem: any) => {
                   form.icon = ''
                   return true
                 }

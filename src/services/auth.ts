@@ -11,5 +11,5 @@ export const passwordLogin = (email: string, password: string) => {
 
 //退出登录请求
 export const logout = () => {
-  return post<BaseResponse<any>>(`/auth/logout`)
+  return post<BaseResponse<any>>(`/auth/logout`, {})
 }

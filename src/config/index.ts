@@ -1,5 +1,5 @@
 // api请求接口前缀
-export const apiPrefix: string = 'http://127.0.0.1:5000'
+export const apiPrefix: string = import.meta.env.VITE_API_PREFIX
 
 //业务状态码
 export const httpCode = {
@@ -12,7 +12,7 @@ export const httpCode = {
 }
 
 //类型字符串与中文映射
-export const typeMap = {
+export const typeMap: Record<string, string> = {
   str: '字符串',
   int: '整形',
   float: '浮点型',

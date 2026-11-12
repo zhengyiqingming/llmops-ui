@@ -1,179 +1,114 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
-import { type Form, type ValidatedError } from '@arco-design/web-vue'
-import { useCreateApp, useGetApp, useUpdateApp } from '@/hooks/use-app'
-import { useUploadImage } from '@/hooks/use-upload-file'
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useCredentialStore } from '@/stores/credential'
+import { Message, type ValidatedError } from '@arco-design/web-vue'
+import { usePasswordLogin } from '@/hooks/use-auth'
+import { useProvider } from '@/hooks/use-oauth'
 
 // 1.定义自定义组件所需数据
-const props = defineProps({
-  app_id: { type: String, default: '', required: false },
-  visible: { type: Boolean, required: true },
-  callback: { type: Function, required: false },
-})
-const emits = defineEmits(['update:visible', 'update:app_id'])
-const { loading: createAppLoading, handleCreateApp } = useCreateApp()
-const { loading: updateAppLoading, handleUpdateApp } = useUpdateApp()
-const { app, loadApp } = useGetApp()
-const { image_url, handleUploadImage } = useUploadImage()
-const defaultForm = {
-  fileList: [] as any,
-  icon: '',
-  name: '',
-  description: '',
+const errorMessage = ref('')
+const loginForm = ref({ email: '', password: '' })
+const credentialStore = useCredentialStore()
+const router = useRouter()
+const { loading: passwordLoginLoading, authorization, handlePasswordLogin } = usePasswordLogin()
+const { loading: providerLoading, redirect_url, handleProvider } = useProvider()
+
+// 2.定义忘记密码点击事件
+const forgetPassword = () => Message.error('忘记密码请联系管理员')
+
+// 3.定义github第三方授权认证登录
+const githubLogin = async () => {
+  // 3.1 调用处理器获取提供者重定向地址
+  await handleProvider('github')
+
+  // 3.2 跳转到重定向地址
+  window.location.href = redirect_url.value
 }
-const form = ref({ ...defaultForm })
-const formRef = ref<InstanceType<typeof Form>>()
 
-// 2.定义隐藏模态窗函数
-const hideModal = () => emits('update:visible', false)
-
-// 3.定义表单提交函数
-const saveApp = async ({ errors }: { errors: Record<string, ValidatedError> | undefined }) => {
-  // 3.1 判断表单是否出错
+// 4.账号密码登录
+const handleSubmit = async ({ errors }: { errors: Record<string, ValidatedError> | undefined }) => {
+  // 4.1 判断表单是否校验成功
   if (errors) return
 
-  // 3.2 检测是保存还是新增，调用不同的API接口
-  if (props.app_id) {
-    await handleUpdateApp(props.app_id, form.value)
-  } else {
-    await handleCreateApp(form.value)
+  // 4.2 如果没有出错则发起请求进行登录
+  try {
+    // 4.3 发起账号密码登录，并且将loading设置为true
+    await handlePasswordLogin(loginForm.value.email, loginForm.value.password)
+    Message.success('登录成功，正在跳转')
+    credentialStore.update(authorization.value)
+    await router.replace({ path: '/home' })
+  } catch (error: any) {
+    // 4.4 添加错误信息并清除密码
+    errorMessage.value = error.message
+    loginForm.value.password = ''
   }
-
-  // 3.3 完成保存操作，隐藏模态窗并调用回调函数
-  emits('update:visible', false)
-  props.callback && props.callback()
 }
-
-// 4.监听模态窗显示状态变化
-watch(
-  () => props.visible,
-  async (newValue) => {
-    // 4.1 清除表单校验信息
-    formRef.value?.resetFields()
-
-    // 4.2 判断弹窗是打开还是关闭
-    if (newValue) {
-      // 4.3 开启弹窗，需要检测下是更新还是创建操作
-      if (props.app_id) {
-        // 4.4 调用接口获取文档片段详情
-        await loadApp(props.app_id)
-
-        // 4.5 更新表单数据
-        form.value = {
-          fileList: [{ uid: '1', name: '应用图标', url: app.value.icon }],
-          icon: app.value.icon,
-          name: app.value.name,
-          description: app.value.description,
-        }
-      }
-    } else {
-      // 4.6 关闭弹窗，需要清空表单数据
-      form.value = defaultForm
-      formRef.value?.resetFields()
-      emits('update:app_id', '')
-    }
-  },
-)
 </script>
 
 <template>
-  <a-modal
-    :width="520"
-    :visible="props.visible"
-    hide-title
-    :footer="false"
-    modal-class="rounded-xl"
-    @cancel="hideModal"
-  >
+  <div class="">
     <!-- 顶部标题 -->
-    <div class="flex items-center justify-between">
-      <div class="text-lg font-bold text-gray-700">
-        {{ props.app_id === '' ? '创建 AI 应用' : '编辑 AI 应用' }}
-      </div>
-      <a-button type="text" class="!text-gray-700" size="small" @click="hideModal">
-        <template #icon>
-          <icon-close />
-        </template>
-      </a-button>
-    </div>
-    <!-- 中间表单 -->
-    <div class="pt-6">
-      <a-form ref="formRef" :model="form" layout="vertical" @submit="saveApp">
-        <a-form-item
-          field="fileList"
-          hide-label
-          :rules="[{ required: true, message: '应用图标不能为空' }]"
-        >
-          <a-upload
-            :limit="1"
-            list-type="picture-card"
-            accept="image/png, image/jpeg"
-            class="!w-auto mx-auto"
-            v-model:file-list="form.fileList"
-            image-preview
-            :custom-request="
-              (option) => {
-                // 1.从option中提取数据
-                const { fileItem, onSuccess, onError } = option
-
-                // 2.使用普通异步函数完成上传
-                const uploadTask = async () => {
-                  try {
-                    await handleUploadImage(fileItem.file as File)
-                    form.icon = image_url
-                    onSuccess(image_url)
-                  } catch (error) {
-                    onError(error)
-                  }
-                }
-                uploadTask()
-
-                return { abort: () => {} }
-              }
-            "
-            :on-before-remove="
-              async () => {
-                form.icon = ''
-                return true
-              }
-            "
-          />
-        </a-form-item>
-        <a-form-item
-          field="name"
-          label="应用名称"
-          asterisk-position="end"
-          :rules="[{ required: true, message: '应用名称不能为空' }]"
-        >
-          <a-input v-model:model-value="form.name" placeholder="请输入应用名称" />
-        </a-form-item>
-        <a-form-item field="description" label="应用描述">
-          <a-textarea
-            v-model:model-value="form.description"
-            :auto-size="{ minRows: 8, maxRows: 8 }"
-            :max-length="800"
-            show-word-limit
-            placeholder="请输入关于该应用的描述信息"
-          />
-        </a-form-item>
-        <!-- 底部按钮 -->
-        <div class="flex items-center justify-between">
-          <div class=""></div>
-          <a-space :size="16">
-            <a-button class="rounded-lg" @click="hideModal">取消</a-button>
-            <a-button
-              :loading="createAppLoading || updateAppLoading"
-              type="primary"
-              html-type="submit"
-              class="rounded-lg"
-            >
-              保存
-            </a-button>
-          </a-space>
+    <div class="text-gray-900 font-bold text-2xl leading-8">慕课LLMOps AppBuilder</div>
+    <p class="text-base leading-6 text-gray-600">高效开发你的AI原生应用</p>
+    <!-- 错误提示占位符 -->
+    <div class="h-8 text-red-700 leading-8 line-clamp-1">{{ errorMessage }}</div>
+    <!-- 登录表单 -->
+    <a-form
+      :model="loginForm"
+      @submit="handleSubmit"
+      layout="vertical"
+      size="large"
+      class="flex flex-col w-full"
+    >
+      <a-form-item
+        field="email"
+        :rules="[{ type: 'email', required: true, message: '登录账号必须是合法的邮箱' }]"
+        :validate-trigger="['change', 'blur']"
+        hide-label
+      >
+        <a-input v-model="loginForm.email" size="large" placeholder="登录账号">
+          <template #prefix>
+            <icon-user />
+          </template>
+        </a-input>
+      </a-form-item>
+      <a-form-item
+        field="password"
+        :rules="[{ required: true, message: '账号密码不能为空' }]"
+        :validate-trigger="['change', 'blur']"
+        hide-label
+      >
+        <a-input-password v-model="loginForm.password" size="large" placeholder="账号密码">
+          <template #prefix>
+            <icon-lock />
+          </template>
+        </a-input-password>
+      </a-form-item>
+      <a-space :size="16" direction="vertical">
+        <div class="flex justify-between">
+          <a-checkbox>记住密码</a-checkbox>
+          <a-link @click="forgetPassword">忘记密码?</a-link>
         </div>
-      </a-form>
-    </div>
-  </a-modal>
+        <a-button
+          :loading="passwordLoginLoading"
+          size="large"
+          type="primary"
+          html-type="submit"
+          long
+        >
+          登录
+        </a-button>
+        <a-divider>第三方授权</a-divider>
+        <a-button :loading="providerLoading" size="large" type="dashed" long @click="githubLogin">
+          <template #icon>
+            <icon-github />
+          </template>
+          Github
+        </a-button>
+      </a-space>
+    </a-form>
+  </div>
 </template>
 
 <style scoped></style>

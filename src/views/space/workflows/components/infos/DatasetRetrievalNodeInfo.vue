@@ -57,9 +57,9 @@ const handleSelectDataset = (idx: number) => {
   const dataset = datasets.value[idx]
 
   // 5.2 检测id是否选中，如果是选中则删除
-  if (form.value.datasets.some((activateDataset: any) => activateDataset.id === dataset.id)) {
+  if (form.value.datasets.some((activateDataset: any) => activateDataset.id === dataset?.id)) {
     form.value.datasets = form.value.datasets.filter(
-      (activateDataset: any) => activateDataset.id !== dataset.id,
+      (activateDataset: any) => activateDataset.id !== dataset?.id,
     )
   } else {
     // 5.3 检测已关联的知识库数量
@@ -69,10 +69,10 @@ const handleSelectDataset = (idx: number) => {
     }
     // 5.4 添加数据到激活知识库列表
     form.value.datasets.push({
-      id: dataset.id,
-      name: dataset.name,
-      icon: dataset.icon,
-      description: dataset.description,
+      id: dataset?.id,
+      name: dataset?.name,
+      icon: dataset?.icon,
+      description: dataset?.description,
     })
   }
 }
@@ -400,7 +400,7 @@ onMounted(() => {
               size="mini"
               type="text"
               class="hidden group-hover:block flex-shrink-0 ml-2 !text-red-700 rounded"
-              @click="() => removeDataset(idx)"
+              @click="() => removeDataset(Number(idx))"
             >
               <template #icon>
                 <icon-delete />

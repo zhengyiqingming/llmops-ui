@@ -1,26 +1,29 @@
 <script setup lang="ts">
-import {
-  useGetDebugConversationSummary,
-  useUpdateDebugConversationSummary,
-} from '@/hooks/use-app.ts'
+import { useGetDebugConversationSummary, useUpdateDebugConversationSummary } from '@/hooks/use-app'
 import { ref } from 'vue'
 
 //1.定义自定义组件所需数据
 const props = defineProps({
   app_id: { type: String, required: true },
-  long_term_memory: { type: Object, required: true },
+  long_term_memory: {
+    type: Object,
+    default: () => {
+      return { enable: false }
+    },
+    required: true,
+  },
 })
 const { debug_conversation_summary, loadDebugConversationSummary } =
   useGetDebugConversationSummary()
 const { loading, handleUpdateDebugConversationSummary } = useUpdateDebugConversationSummary()
 const summaryModalVisible = ref(false)
 
-//2.模态窗打开处理器
+// 2.模态窗打开处理器
 const openSummaryModal = async () => {
-  //2.1调用API获取长期记忆
+  // 2.1 调用API获取长期记忆
   await loadDebugConversationSummary(props.app_id)
 
-  //2.2开启模态窗
+  // 2.2 开启模态窗
   summaryModalVisible.value = true
 }
 </script>

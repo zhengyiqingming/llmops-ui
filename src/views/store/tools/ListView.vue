@@ -76,7 +76,7 @@ onMounted(() => {
       <a-row :gutter="[20, 20]" class="flex-1">
         <!-- 有数据的UI状态 -->
         <a-col v-for="(builtinTool, idx) in filterBuiltinTools" :key="builtinTool.name" :span="6">
-          <a-card hoverable class="cursor-pointer rounded-lg" @click="showIdx = idx">
+          <a-card hoverable class="cursor-pointer rounded-lg" @click="showIdx = Number(idx)">
             <!-- 顶部提供商名称 -->
             <div class="flex items-center gap-3 mb-3">
               <!-- 左侧图标 -->

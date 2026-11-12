@@ -47,7 +47,7 @@ const handleShowToolInfoModal = async (idx: number) => {
   // 2.1 获取当前选中的工具
   if (idx === -1) return
   toolInfoIdx.value = idx
-  const tool = props.tools[idx]
+  const tool = props.tools[idx]!
 
   // 2.2 检测不同的工具类型调用不同API接口
   if (tool.type === 'builtin_tool') {
@@ -86,7 +86,7 @@ const handleShowToolInfoModal = async (idx: number) => {
         name: api_tool.value.name,
         label: api_tool.value.name,
         description: api_tool.value.description,
-        inputs: builtin_tool.value.inputs,
+        inputs: api_tool.value.inputs,
         params: [],
       },
     }
@@ -112,7 +112,7 @@ const handleCancelToolInfoModal = () => {
 // 4.定义提交工具设置模态窗
 const handleSubmitToolInfo = async () => {
   // 4.1 获取当前工具信息
-  const tool = props.tools[toolInfoIdx.value]
+  const tool = props.tools[toolInfoIdx.value]!
   if (tool.type === 'api_tool') {
     // 4.2 自定义工具则直接关闭模态窗
     handleCancelToolInfoModal()
@@ -121,7 +121,7 @@ const handleSubmitToolInfo = async () => {
 
   // 4.3 更新草稿配置
   const newTools = [...props.tools]
-  newTools[toolInfoIdx.value]['tool']['params'] = toolInfoSettingForm.value
+  newTools[toolInfoIdx.value]!['tool']['params'] = toolInfoSettingForm.value
   await handleUpdateDraftAppConfig(props.app_id, {
     tools: newTools.map((item) => {
       return {
@@ -629,7 +629,9 @@ onMounted(() => {
                   <a-button
                     size="mini"
                     class="hidden group-hover:block rounded px-1.5 flex-shrink-0"
-                    @click="async () => await handleSelectTool(builtin_tool_idx, tool_idx)"
+                    @click="
+                      async () => await handleSelectTool(Number(builtin_tool_idx), Number(tool_idx))
+                    "
                   >
                     <template #icon>
                       <icon-plus />
@@ -677,7 +679,8 @@ onMounted(() => {
                       size="mini"
                       class="hidden group-hover:block rounded px-1.5 flex-shrink-0"
                       @click="
-                        async () => await handleSelectTool(Number(api_tool_provider_idx), tool_idx)
+                        async () =>
+                          await handleSelectTool(Number(api_tool_provider_idx), Number(tool_idx))
                       "
                     >
                       <template #icon>

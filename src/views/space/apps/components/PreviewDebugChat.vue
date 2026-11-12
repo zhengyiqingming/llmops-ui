@@ -11,8 +11,8 @@ import {
   useStopDebugChat,
 } from '@/hooks/use-app'
 import { useAccountStore } from '@/stores/account'
-import HumanMessage from './HumanMessage.vue'
-import AiMessage from './AiMessage.vue'
+import HumanMessage from '@/components/HumanMessage.vue'
+import AiMessage from '@/components/AiMessage.vue'
 import { Message } from '@arco-design/web-vue'
 import { QueueEvent } from '@/config'
 import { useGenerateSuggestedQuestions } from '@/hooks/use-ai.ts'
@@ -20,14 +20,24 @@ import { useGenerateSuggestedQuestions } from '@/hooks/use-ai.ts'
 // 1.定义自定义组件所需数据
 const route = useRoute()
 const props = defineProps({
-  app: { type: Object, default: {}, required: true },
+  app: {
+    type: Object,
+    default: () => {
+      return {}
+    },
+    required: true,
+  },
   suggested_after_answer: {
     type: Object as PropType<{ enable: boolean }>,
-    default: { enable: true },
+
+    default: () => {
+      return { enable: true }
+    },
+
     required: true,
   },
   opening_statement: { type: String, default: '', required: true },
-  opening_questions: { type: Array as PropType<string[]>, default: [], required: true },
+  opening_questions: { type: Array as PropType<string[]>, default: () => [], required: true },
 })
 const query = ref('')
 const message_id = ref('')
@@ -41,7 +51,6 @@ const { loading: deleteDebugConversationLoading, handleDeleteDebugConversation }
 const {
   loading: getDebugConversationMessagesWithPageLoading,
   messages,
-  paginator,
   loadDebugConversationMessages,
 } = useGetDebugConversationMessagesWithPage()
 const { loading: debugChatLoading, handleDebugChat } = useDebugChat()
@@ -110,14 +119,14 @@ const handleSubmit = async () => {
     const event = event_response?.event
     const data = event_response?.data
     const event_id = data?.id
-    let agent_thoughts = messages.value[0].agent_thoughts
+    const agent_thoughts = messages.value[0]!.agent_thoughts
 
     // 5.8 初始化数据检测与赋值
     if (message_id.value === '' && data?.message_id) {
       task_id.value = data?.task_id
       message_id.value = data?.message_id
-      messages.value[0].id = data?.message_id
-      messages.value[0].conversation_id = data?.conversation_id
+      messages.value[0]!.id = data?.message_id
+      messages.value[0]!.conversation_id = data?.conversation_id
     }
 
     // 5.9 循环处理得到的事件，记录除ping之外的事件
@@ -147,15 +156,21 @@ const handleSubmit = async () => {
             ...agent_thoughts[agent_thought_idx],
             thought: agent_thoughts[agent_thought_idx]?.thought + data?.thought,
             latency: data?.latency,
-          }
+          } as any
         }
 
         // 5.14 更新/添加answer答案
-        messages.value[0].answer += data?.thought
-        messages.value[0].latency = data?.latency
-        messages.value[0].total_token_count = data?.total_token_count
+        messages.value[0]!.answer += data?.thought
+        messages.value[0]!.latency = data?.latency
+        messages.value[0]!.total_token_count = data?.total_token_count
+      } else if (event === QueueEvent.error) {
+        // 5.15 事件为error，将错误信息（observation）填充到消息答案中进行展示
+        messages.value[0]!.answer = data?.observation
+      } else if (event === QueueEvent.timeout) {
+        // 5.16 事件为timeout，则人工提示超时信息
+        messages.value[0]!.answer = '当前Agent执行已超时，无法得到答案，请重试'
       } else {
-        // 5.15 处理其他类型的事件，直接填充覆盖数据
+        // 5.17 处理其他类型的事件，直接填充覆盖数据
         position += 1
         agent_thoughts.push({
           id: event_id,
@@ -171,14 +186,14 @@ const handleSubmit = async () => {
       }
 
       // 5.16 更新agent_thoughts
-      messages.value[0].agent_thoughts = agent_thoughts
+      messages.value[0]!.agent_thoughts = agent_thoughts
 
       scroller.value.scrollToBottom()
     }
   })
 
-  // 5.7 判断是否开启建议问题生成，如果开启了则发起api请求获取数据
-  if (props.suggested_after_answer.enable) {
+  // 5.17 判断是否开启建议问题生成，如果开启了则发起api请求获取数据
+  if (props.suggested_after_answer.enable && message_id.value) {
     await handleGenerateSuggestedQuestions(message_id.value)
     //生成完建议问题之后，会延迟等一会再去滚动到底部
     setTimeout(() => scroller.value && scroller.value.scrollToBottom(), 100)
@@ -218,7 +233,7 @@ onMounted(async () => {
 
 <template>
   <div class="">
-    <!-- 1.历史对话列表 -->
+    <!-- 历史对话列表 -->
     <div v-if="messages.length > 0" class="flex flex-col px-6 h-[calc(100vh-238px)]">
       <dynamic-scroller
         ref="scroller"
@@ -227,7 +242,7 @@ onMounted(async () => {
         @scroll="handleScroll"
         class="h-full scrollbar-w-none"
       >
-        <template v-slot="{ item, index, active }">
+        <template v-slot="{ item, active }">
           <dynamic-scroller-item :item="item" :active="active" :data-index="item.id">
             <div class="flex flex-col gap-6 py-6">
               <!--   人类消息  -->
@@ -241,6 +256,7 @@ onMounted(async () => {
                 :latency="item.latency"
                 :total_token_count="item.total_token_count"
                 @select-suggested-question="handleSubmitQuestion"
+                message_class="max-w-[calc(100%-65px)]"
               />
             </div>
           </dynamic-scroller-item>
@@ -256,7 +272,7 @@ onMounted(async () => {
         </a-button>
       </div>
     </div>
-    <!-- 2.对话列表为空时展示的对话开场白 -->
+    <!-- 对话列表为空时展示的对话开场白 -->
     <div v-else class="flex flex-col p-6 gap-2 items-center justify-center h-[calc(100vh-238px)]">
       <!-- 应用图标与名称 -->
       <div class="flex flex-col items-center gap-2">
@@ -284,7 +300,7 @@ onMounted(async () => {
         </div>
       </div>
     </div>
-    <!-- 3.对话输入框 -->
+    <!-- 对话输入框 -->
     <div class="w-full flex flex-col flex-shrink-0">
       <!-- 顶部输入框 -->
       <div class="px-6 flex items-center gap-4">
@@ -296,13 +312,13 @@ onMounted(async () => {
           shape="circle"
           @click="
             async () => {
-              //1.先调用停止响应接口
+              // 1.先调用停止响应接口
               await handleStop()
 
-              // 1.调用api接口清空会话
+              // 2.调用api接口清空会话
               await handleDeleteDebugConversation(props.app?.id)
 
-              // 2.重新获取数据
+              // 3.重新获取数据
               await loadDebugConversationMessages(props.app?.id, true)
             }
           "

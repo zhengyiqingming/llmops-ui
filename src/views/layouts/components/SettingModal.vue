@@ -108,7 +108,7 @@ watch(
               :limit="1"
               image-preview
               :custom-request="
-                (option) => {
+                (option: any) => {
                   const uploadTask = async () => {
                     // 1.提取数据并发起请求获取响应内容
                     const { fileItem, onSuccess } = option

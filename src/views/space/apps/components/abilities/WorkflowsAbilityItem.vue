@@ -3,7 +3,7 @@ import { nextTick, type PropType, ref, watch } from 'vue'
 import { useUpdateDraftAppConfig } from '@/hooks/use-app'
 import { cloneDeep, isEqual } from 'lodash'
 import { Message } from '@arco-design/web-vue'
-import { useGetWorkflowsWithPage } from '@/hooks/use-workflow.ts'
+import { useGetWorkflowsWithPage } from '@/hooks/use-workflow'
 
 // 1.定义自定义组件所需数据
 const props = defineProps({
@@ -17,7 +17,7 @@ const props = defineProps({
         description: string
       }[]
     >,
-    default: [],
+    default: () => [],
     required: true,
   },
 })
@@ -59,13 +59,13 @@ const handleCancelWorkflowsModal = () => {
 
 // 7.工作流选择处理器
 const handleSelectWorkflow = (idx: number) => {
-  // 7.1 提取对应的工作流
+  // 7.1 提取对应的工作流id
   const workflow = apiWorkflows.value[idx]
 
   // 7.2 检测id是否选中，如果是选中则删除
-  if (activateWorkflows.value.some((activateWorkflow) => activateWorkflow.id === workflow.id)) {
+  if (activateWorkflows.value.some((activateWorkflow) => activateWorkflow.id === workflow?.id)) {
     activateWorkflows.value = activateWorkflows.value.filter(
-      (activateWorkflow) => activateWorkflow.id !== workflow.id,
+      (activateWorkflow) => activateWorkflow.id !== workflow?.id,
     )
   } else {
     // 7.3 检测已关联的工作流数量
@@ -73,34 +73,32 @@ const handleSelectWorkflow = (idx: number) => {
       Message.warning('关联工作流已超过5个，无法继续关联')
       return
     }
-    // 7.4 添加数据到激活知识库列表
+    // 7.4 添加数据到激活工作流列表
     activateWorkflows.value.push({
-      id: workflow.id,
-      name: workflow.name,
-      icon: workflow.icon,
-      description: workflow.description,
+      id: workflow?.id,
+      name: workflow?.name,
+      icon: workflow?.icon,
+      description: workflow?.description,
     })
   }
 }
 
 // 8.提交更新关联工作流
 const handleSubmitWorkflows = async () => {
-  try {
-    // 8.1 处理数据并完成API接口提交
-    await handleUpdateDraftAppConfig(props.app_id, {
-      workflows: activateWorkflows.value.map((activateWorkflow) => activateWorkflow.id),
-    })
+  // 8.1 处理数据并完成API接口提交
+  await handleUpdateDraftAppConfig(props.app_id, {
+    workflows: activateWorkflows.value.map((activateWorkflow) => activateWorkflow.id),
+  })
 
-    // 8.2 接口更新更新成功，同步表单信息
-    originWorkflows.value = activateWorkflows.value
-    await nextTick()
+  // 8.2 接口更新更新成功，同步表单信息
+  originWorkflows.value = activateWorkflows.value
+  await nextTick()
 
-    // 8.3 双向同步更新props中的数据
-    emits('update:workflows', activateWorkflows.value)
+  // 8.3 双向同步更新props中的数据
+  emits('update:workflows', activateWorkflows.value)
 
-    // 8.4 隐藏模态窗
-    handleCancelWorkflowsModal()
-  } catch (e) {}
+  // 8.4 隐藏模态窗
+  handleCancelWorkflowsModal()
 }
 
 // 9.监听草稿配置关联的工作流列表

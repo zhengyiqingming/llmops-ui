@@ -2,7 +2,7 @@
 // @ts-ignore
 import { DynamicScroller, DynamicScrollerItem } from 'vue-virtual-scroller'
 import 'vue-virtual-scroller/dist/vue-virtual-scroller.css'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { cloneDeep } from 'lodash'
 import { Message, Modal } from '@arco-design/web-vue'
@@ -19,8 +19,8 @@ import {
   useUpdateConversationIsPinned,
 } from '@/hooks/use-conversation'
 import UpdateNameModal from './components/UpdateNameModal.vue'
-import AiMessage from '@/views/space/apps/components/AiMessage.vue'
-import HumanMessage from '@/views/space/apps/components/HumanMessage.vue'
+import HumanMessage from '@/components/HumanMessage.vue'
+import AiMessage from '@/components/AiMessage.vue'
 import { useGenerateSuggestedQuestions } from '@/hooks/use-ai'
 import { QueueEvent } from '@/config'
 import { deleteMessage as apiDeleteMessage } from '@/services/conversation'
@@ -58,12 +58,13 @@ const conversation = computed(() => {
     return newConversation.value
   } else if (selectedConversation.value !== '') {
     // 2.2 查询置顶会话数据，如果不为空则直接返回
-    let item = pinned_conversations.value.find((item) => item.id === selectedConversation.value)
+    const item = pinned_conversations.value.find((item) => item.id === selectedConversation.value)
     if (item) return item
 
     // 2.3 置顶会话查询不到数据，则查询非置顶数据
-    return unpinned_conversations.value.find((item) => item.id === selectedConversation.value)
+    unpinned_conversations.value.find((item) => item.id === selectedConversation.value)
   }
+  return null
 })
 
 // 3.定义保存滚动高度函数
@@ -79,14 +80,14 @@ const changeIsPinned = async (idx: number, origin_is_pinned: boolean) => {
     : unpinned_conversations.value[idx]
 
   // 3.2 调用hooks发起api请求
-  await handleUpdateConversationIsPinned(conversation.id, !origin_is_pinned, () => {
+  await handleUpdateConversationIsPinned(conversation?.id, !origin_is_pinned, () => {
     // 3.3 执行成功调用回调，更新会话位置
     if (origin_is_pinned) {
       pinned_conversations.value.splice(idx, 1)
-      unpinned_conversations.value.push(conversation)
+      unpinned_conversations.value.push(conversation!)
     } else {
       unpinned_conversations.value.splice(idx, 1)
-      pinned_conversations.value.push(conversation)
+      pinned_conversations.value.push(conversation!)
     }
   })
 }
@@ -99,7 +100,7 @@ const updateName = (idx: number, origin_is_pinned: boolean) => {
     : unpinned_conversations.value[idx]
 
   // 4.2 更新响应数据状态
-  updateConversationNameId.value = conversation.id
+  updateConversationNameId.value = conversation?.id
   updateConversationNameModalVisible.value = true
 }
 
@@ -111,10 +112,10 @@ const successUpdateNameCallback = (conversation_id: string, conversation_name: s
   // 5.2 判断索引值是否为-1
   if (idx !== -1) {
     // 5.2 置顶会话
-    pinned_conversations.value[idx]['name'] = conversation_name
+    pinned_conversations.value[idx]!['name'] = conversation_name
   } else {
     idx = unpinned_conversations.value.findIndex((item) => item.id === conversation_id)
-    if (idx !== -1) unpinned_conversations.value[idx]['name'] = conversation_name
+    if (idx !== -1) unpinned_conversations.value[idx]!['name'] = conversation_name
   }
 }
 
@@ -126,7 +127,7 @@ const deleteConversation = async (idx: number, origin_is_pinned: boolean) => {
     : unpinned_conversations.value[idx]
 
   // 6.2 调用hooks发起请求
-  handleDeleteConversation(conversation.id, () => {
+  handleDeleteConversation(conversation?.id, () => {
     // 6.3 执行成功调用回调，删除回话
     if (origin_is_pinned) {
       pinned_conversations.value.splice(idx, 1)
@@ -249,14 +250,14 @@ const handleSubmit = async () => {
     const event = event_response?.event
     const data = event_response?.data
     const event_id = data?.id
-    let agent_thoughts = messages.value[0].agent_thoughts
+    const agent_thoughts = messages.value[0]!.agent_thoughts
 
     // 11.8 初始化数据检测与赋值
     if (message_id.value === '' && data?.message_id) {
       task_id.value = data?.task_id
       message_id.value = data?.message_id
-      messages.value[0].id = data?.message_id
-      messages.value[0].conversation_id = data?.conversation_id
+      messages.value[0]!.id = data?.message_id
+      messages.value[0]!.conversation_id = data?.conversation_id
     }
 
     // 11.9 循环处理得到的事件，记录除ping之外的事件
@@ -286,13 +287,19 @@ const handleSubmit = async () => {
             ...agent_thoughts[agent_thought_idx],
             thought: agent_thoughts[agent_thought_idx]?.thought + data?.thought,
             latency: data?.latency,
-          }
+          } as any
         }
 
         // 5.14 更新/添加answer答案
-        messages.value[0].answer += data?.thought
-        messages.value[0].latency = data?.latency
-        messages.value[0].total_token_count = data?.total_token_count
+        messages.value[0]!.answer += data?.thought
+        messages.value[0]!.latency = data?.latency
+        messages.value[0]!.total_token_count = data?.total_token_count
+      } else if (event === QueueEvent.error) {
+        // 5.15 事件为error，将错误信息（observation）填充到消息答案中进行展示
+        messages.value[0]!.answer = data?.observation
+      } else if (event === QueueEvent.timeout) {
+        // 5.16 事件为timeout，则人工提示超时信息
+        messages.value[0]!.answer = '当前Agent执行已超时，无法得到答案，请重试'
       } else {
         // 11.11 处理其他类型的事件，直接填充覆盖数据
         position += 1
@@ -310,23 +317,24 @@ const handleSubmit = async () => {
       }
 
       // 11.12 更新agent_thoughts
-      messages.value[0].agent_thoughts = agent_thoughts
+      messages.value[0]!.agent_thoughts = agent_thoughts
 
       scroller.value.scrollToBottom()
     }
   })
-  // 11.13 无论会话是否终端，都会生成建议问题
+
+  // 11.13 无论会话是否中断，都会生成建议问题
   if (messages.value.length > 0) {
-    const currentConvId = messages.value[0].conversation_id
+    const currentConvId = messages.value[0]!.conversation_id
     // 注意这里：直接取列表里最新一条的 ID，这才是最准的
-    const currentMsgId = messages.value[0].id
+    const currentMsgId = messages.value[0]!.id
     if (selectedConversationTmp === 'new_conversation') {
-      // 1. 将新会话填充到左侧列表中 (本地更新)
+      // 11.14. 将新会话填充到左侧列表中 (本地更新)
       unpinned_conversations.value.unshift({
         id: currentConvId,
         name: 'New Conversation',
         summary: '',
-        created_at: messages.value[0].created_at || Date.now(),
+        created_at: messages.value[0]!.created_at || Date.now(),
       })
 
       // 11.15. 切换当前选中的会话 ID (必须在清空 newConversation 之前做)
@@ -338,18 +346,13 @@ const handleSubmit = async () => {
     }
 
     // 11.18 判断是否开启建议问题生成，如果开启了则发起api请求获取数据
-    if (web_app.value?.app_config?.suggested_after_answer.enable) {
+    if (web_app.value?.app_config?.suggested_after_answer.enable && currentMsgId) {
       try {
         await handleGenerateSuggestedQuestions(currentMsgId)
       } catch (error) {
         console.warn('生成建议问题失败:', error)
       }
       setTimeout(async () => {
-        // 建议：在流式输出结束后，重新拉取一次会话列表,防止前面的watch拉取消息的时候，数据库还未及时存取
-        if (currentConvId) {
-          // 重新拉取消息列表，强制刷新右侧 UI
-          await loadConversationMessagesWithPage(currentConvId, true)
-        }
         if (scroller.value) {
           scroller.value.scrollToBottom()
         }
@@ -396,6 +399,12 @@ watch(
     } else if (newValue !== '') {
       // 15.3 选择了已有会话，获取对应会话的消息列表
       await loadConversationMessagesWithPage(newValue, true)
+      await nextTick(() => {
+        // 15.4 确保在视图更新完成后执行滚动操作
+        if (scroller.value) {
+          scroller.value.scrollToBottom()
+        }
+      })
     }
   },
   { immediate: true },
@@ -560,7 +569,7 @@ onMounted(async () => {
           @scroll="handleScroll"
           class="h-full scrollbar-w-none"
         >
-          <template v-slot="{ item, index, active }">
+          <template v-slot="{ item, active }">
             <dynamic-scroller-item :item="item" :active="active" :data-index="item.id">
               <div class="flex flex-col gap-6 py-6 relative group">
                 <!-- 删除按钮（固定显示在右上角） -->

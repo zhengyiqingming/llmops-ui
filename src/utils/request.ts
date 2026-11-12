@@ -4,7 +4,7 @@
 // 4.每次获取数据都需要使用response.json()才可以获取数据，需要封装
 import { Message } from '@arco-design/web-vue'
 import { apiPrefix, httpCode } from '@/config'
-import { useCredentialStore } from '@/stores/credential.ts'
+import { useCredentialStore } from '@/stores/credential'
 import router from '@/router'
 
 // 1.超时时间为100s
@@ -37,7 +37,11 @@ const baseFetch = <T>(url: string, fetchOptions: FetchOptionType): Promise<T> =>
   )
   const { credential, clear: clearCredential } = useCredentialStore()
   const access_token = credential.access_token
-  if (access_token) options.headers.set('Authorization', `Bearer ${access_token}`)
+  if (access_token) {
+    // 如果 options.headers 已经是 Headers 实例就直接用，否则用原 headers 实例化一个新的 Headers 对象
+    options.headers = new Headers(options.headers || {})
+    options.headers.set('Authorization', `Bearer ${access_token}`)
+  }
 
   // 6.组装url
   let urlWithPrefix = `${apiPrefix}${url.startsWith('/') ? url : `/${url}`}`
@@ -109,16 +113,20 @@ export const ssePost = async (
   const options = Object.assign({}, baseFetchOptions, { method: 'POST' }, fetchOptions)
   const { credential } = useCredentialStore()
   const access_token = credential.access_token
-  if (access_token) options.headers.set('Authorization', `Bearer ${access_token}`)
-  //5.2 组装请求URL
-  let urlWithPrefix = `${apiPrefix}${url.startsWith('/') ? url : `/${url}`}`
+  if (access_token) {
+    // 如果 options.headers 已经是 Headers 实例就直接用，否则用原 headers 实例化一个新的 Headers 对象
+    options.headers = new Headers(options.headers || {})
+    options.headers.set('Authorization', `Bearer ${access_token}`)
+  }
+  // 5.2 组装请求URL
+  const urlWithPrefix = `${apiPrefix}${url.startsWith('/') ? url : `/${url}`}`
 
-  //5.3从options解构出body参数，并处理body对应的数据
+  // 5.3 从options解构出body参数，并处理body对应的数据
   const { body } = fetchOptions
 
   if (body) options.body = JSON.stringify(body)
 
-  //5.4发起fetch请求并处理流式事件响应
+  // 5.4 发起fetch请求并处理流式事件响应
   const response = await globalThis.fetch(urlWithPrefix, options as RequestInit)
 
   // 5.5 获取响应内容类型并判断类型
@@ -137,27 +145,27 @@ const handleStream = (
   onData: (data: Record<string, any>) => void,
 ): Promise<void> => {
   return new Promise((resolve, reject) => {
-    // 检测网络请求是否正常
+    // 1.检测网络请求是否正常
     if (!response.ok) {
       reject(new Error('网络请求失败'))
       return
     }
 
-    //2.构建reader以及decoder
+    // 2.构建reader以及decoder
     const reader = response.body?.getReader()
     const decoder = new TextDecoder('utf-8')
     let buffer = ''
     let event = ''
     let data = ''
 
-    //3.构建read函数用于去读取数据
+    // 3.构建read函数用于去读取数据
     const read = () => {
       reader?.read().then((result: any) => {
         if (result.done) {
           resolve()
           return
         }
-
+        // 追加新数据到 buffer
         buffer += decoder.decode(result.value, { stream: true })
         const lines = buffer.split('\n')
 
@@ -170,7 +178,7 @@ const handleStream = (
               data = line.slice(5).trim()
             }
 
-            //每个事件以空行结束，只有event和data同时存在，才表示一次流式事件的数据完整获取到了
+            // 每个事件以空行结束，只有event和data同时存在，才表示一次流式事件的数据完整获取到了
             if (line === '') {
               if (event !== '' && data !== '') {
                 onData({
@@ -191,17 +199,17 @@ const handleStream = (
       })
     }
 
-    //4.调用read函数去执行获取对应的的数据
+    // 4.调用read函数去执行获取对应的的数据
     read()
   })
 }
 
 //使用xhr实现文件上传
 export const upload = <T>(url: string, options: any = {}): Promise<T> => {
-  //1.组装请求URL
-  let urlWithPrefix = `${apiPrefix}${url.startsWith('/') ? url : `/${url}`}`
+  // 1.组装请求URL
+  const urlWithPrefix = `${apiPrefix}${url.startsWith('/') ? url : `/${url}`}`
 
-  //2.组装xhr请求配置信息
+  // 2.组装xhr请求配置信息
   const defaultOptions = {
     method: 'POST',
     url: urlWithPrefix,
@@ -217,28 +225,28 @@ export const upload = <T>(url: string, options: any = {}): Promise<T> => {
   const access_token = credential.access_token
   if (access_token) options.headers['Authorization'] = `Bearer ${access_token}`
 
-  //3.构建promise并使用xhr完成文件上传
+  // 3.构建promise并使用xhr完成文件上传
   return new Promise((resolve, reject) => {
-    //4.创建xhr服务,js自己提供的类
-    const xhr: XMLHttpRequest = new XMLHttpRequest()
+    // 4.创建xhr服务,js自己提供的类
+    const xhr = new XMLHttpRequest()
 
-    //5.初始化xhr请求并配置headers
+    // 5.初始化xhr请求并配置headers
     xhr.open(options.method, options.url)
     for (const key in options.headers) {
       xhr.setRequestHeader(key, options.headers[key])
     }
 
-    //6.设置xhr响应格式并携带授权凭证（例如cookie）
+    // 6.设置xhr响应格式并携带授权凭证（例如cookie）
     xhr.withCredentials = true
     xhr.responseType = 'json'
 
-    //7.监听xhr状态变化并导出数据
+    // 7.监听xhr状态变化并导出数据
     xhr.onreadystatechange = async () => {
-      //8.判断xhr的状态是不是为4，如果为4则代表已经传输完成（涵盖成功与失败）
+      // 8.判断xhr的状态是不是为4，如果为4则代表已经传输完成（涵盖成功与失败）
       if (xhr.readyState === 4) {
-        //9.检查响应状态码，当HTTP状态码为200的时候表示请求成功
+        // 9.检查响应状态码，当HTTP状态码为200的时候表示请求成功
         if (xhr.status === 200) {
-          //10.判断业务状态码是否正常
+          // 10.判断业务状态码是否正常
           const response = xhr.response
           if (response.code === httpCode.success) {
             resolve(xhr.response)
@@ -254,10 +262,10 @@ export const upload = <T>(url: string, options: any = {}): Promise<T> => {
       }
     }
 
-    //10.添加xhr进度监听(onprogress为外部传递的监听函数)
+    // 10.添加xhr进度监听(onprogress为外部传递的监听函数)
     xhr.upload.onprogress = options.onprogress
 
-    //11.发送请求
+    // 11.发送请求
     xhr.send(options.data)
   })
 }
@@ -270,6 +278,6 @@ export const get = <T>(url: string, options = {}) => {
   return request<T>(url, Object.assign({}, options, { method: 'GET' }))
 }
 
-export const post = <T>(url: string, options: {}) => {
+export const post = <T>(url: string, options = {}) => {
   return request<T>(url, Object.assign({}, options, { method: 'POST' }))
 }

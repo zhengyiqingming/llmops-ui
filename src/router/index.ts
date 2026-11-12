@@ -1,5 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import auth from '@/utils/auth.ts'
+import auth from '@/utils/auth'
 import DefaultLayout from '@/views/layouts/DefaultLayout.vue'
 import BlankLayout from '@/views/layouts/BlankLayout.vue'
 
@@ -148,7 +148,7 @@ const router = createRouter({
   ],
 })
 
-router.beforeEach(async (to, from) => {
+router.beforeEach(async (to) => {
   if (!auth.isLogin() && !['auth-login', 'auth-authorize'].includes(to.name as string)) {
     return { path: '/auth/login' }
   }

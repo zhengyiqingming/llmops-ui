@@ -1,18 +1,18 @@
 <script setup lang="ts">
 import { computed, nextTick, type PropType } from 'vue'
-import { useUpdateDraftAppConfig } from '@/hooks/use-app.ts'
-//1.定义自定义组件所需数据
+import { useUpdateDraftAppConfig } from '@/hooks/use-app'
+// 1.定义自定义组件所需数据
 const props = defineProps({
-  app_id: { type: String, required: true },
-  opening_statement: { type: String, required: true },
-  opening_questions: { type: Array as PropType<string[]>, default: [], required: true },
+  app_id: { type: String, default: '', required: true },
+  opening_statement: { type: String, default: '', required: true },
+  opening_questions: { type: Array as PropType<string[]>, default: () => [], required: true },
 })
-//声明事件列表：update+属性名 作为事件名，父组件就可以在外部直接使用 v-model:属性名 来跟它做双向绑定。
+// 声明事件列表：update+属性名 作为事件名，父组件就可以在外部直接使用 v-model:属性名 来跟它做双向绑定。
 const emits = defineEmits(['update:opening_statement', 'update:opening_questions'])
 const { handleUpdateDraftAppConfig } = useUpdateDraftAppConfig()
 const computed_opening_questions = computed({
   get(): string[] {
-    //1.检测传递的opening_questions长度是否等于3，如果小于3并且最后一个元素不是空数据则新增一个
+    // 1.检测传递的opening_questions长度是否等于3，如果小于3并且最后一个元素不是空数据则新增一个
     const newValue = [...props.opening_questions]
     if (newValue.length < 3 && newValue[newValue.length - 1] !== '') {
       newValue.push('')
@@ -25,7 +25,7 @@ const computed_opening_questions = computed({
   },
 })
 
-//2.定义提交开场建议问题列表处理器
+// 2.定义提交开场建议问题列表处理器
 const handleUpdateOpeningQuestions = async () => {
   await handleUpdateDraftAppConfig(props.app_id, {
     opening_questions: computed_opening_questions.value.filter((item) => item.trim() !== ''),
@@ -82,7 +82,7 @@ const handleUpdateOpeningQuestions = async () => {
               <a-input
                 :model-value="opening_question"
                 @update:model-value="
-                  (value) => {
+                  (value: any) => {
                     const newQuestions = [...computed_opening_questions]
                     newQuestions[idx] = value
                     computed_opening_questions = newQuestions

@@ -2,11 +2,16 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { apiPrefix } from '@/config'
 import { useGetLanguageModel, useGetLanguageModels } from '@/hooks/use-language-model'
-import { useUpdateDraftAppConfig } from '@/hooks/use-app'
 
 // 1.定义自定义组件所需数据
 const props = defineProps({
-  model_config: { type: Object, default: {}, required: true },
+  model_config: {
+    type: Object,
+    default: () => {
+      return {}
+    },
+    required: true,
+  },
 })
 const emits = defineEmits(['update:model_config'])
 const form = ref<any>({})
@@ -110,18 +115,18 @@ onMounted(() => {
         <div class="flex flex-col gap-2 mb-2">
           <div class="text-gray-700">模型</div>
           <a-select
-            :options="modelOptions"
             v-model:model-value="form.selectValue"
+            :options="modelOptions"
             size="small"
             class="rounded-lg mb-2"
             placeholder="请选择Agent使用的大语言模型"
             @change="changeModel"
           >
-            <!--data 是 Arco Design a-select 插槽参数，它代表当前被渲染的那个 option 对象，也就是 modelOptions 里 options 数组的单个元素-->
-            <!--    data.value = "语言模型名/模型名"，例如 "openai/gpt-4o" ，data.label = model.label（模型展示名）         -->
-            <!--      插槽	    触发时机	              data 是谁
-                      #label	已选中值回显到选择框时	  选中的那个叶子 option 对象
-                      #option	下拉面板里逐个渲染选项时	当前正在渲染的叶子 option 对象      -->
+            <!--data 是 Arco Design a-select 插槽参数，它代表当前被渲染的那个 option 对象，也就是 modelOptions 里 options 数组的单个元素
+            data.value = "语言模型名/模型名"，例如 "openai/gpt-4o" ，data.label = model.label（模型展示名）
+            插槽	    触发时机	              data 是谁
+            #label	已选中值回显到选择框时	  选中的那个叶子 option 对象
+            #option	下拉面板里逐个渲染选项时	当前正在渲染的叶子 option 对象      -->
             <template #label="{ data }">
               <div class="flex items-center gap-2">
                 <a-avatar
@@ -153,6 +158,7 @@ onMounted(() => {
         <a-spin :loading="getLanguageModelLoading" class="w-full">
           <div
             v-for="parameter in language_model?.parameters"
+            :key="parameter.name"
             class="flex items-center gap-2 h-8 mb-4"
           >
             <!-- 字段标签 -->

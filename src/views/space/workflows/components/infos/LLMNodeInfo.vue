@@ -1,15 +1,21 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { type GraphNode, useVueFlow } from '@vue-flow/core'
+import { useVueFlow } from '@vue-flow/core'
 import { cloneDeep } from 'lodash'
 import { getReferencedVariables } from '@/utils/helper'
-import { Message, ValidatedError } from '@arco-design/web-vue'
+import { Message, type ValidatedError } from '@arco-design/web-vue'
 import ModelConfig from './components/ModelConfig.vue'
 
 // 1.定义自定义组件所需数据
 const props = defineProps({
   visible: { type: Boolean, required: true, default: false },
-  node: { type: Object as GraphNode, required: true, default: {} },
+  node: {
+    type: Object,
+    required: true,
+    default: () => {
+      return {}
+    },
+  },
   loading: { type: Boolean, required: true, default: false },
 })
 const emits = defineEmits(['update:visible', 'updateNode'])
@@ -47,7 +53,7 @@ const onSubmit = async ({ errors }: { errors: Record<string, ValidatedError> | u
     description: form.value.description,
     prompt: form.value.prompt,
     model_config: form.value.model_config,
-    inputs: cloneInputs.map((input) => {
+    inputs: cloneInputs.map((input: any) => {
       return {
         name: input.name,
         description: '',
@@ -163,7 +169,7 @@ watch(
         <div class="flex items-center justify-between">
           <!-- 左侧标题 -->
           <div class="flex items-center gap-2 text-gray-700 font-semibold">
-            <div class="">大模型配置</div>
+            <div class="">大语言模型配置</div>
             <a-tooltip content="选择不同的大语言模型作为节点的底座模型">
               <icon-question-circle />
             </a-tooltip>
@@ -243,7 +249,7 @@ watch(
           <div class="w-[8%] text-right">
             <icon-minus-circle
               class="text-gray-500 hover:text-gray-700 cursor-pointer flex-shrink-0"
-              @click="() => removeFormInputField(idx)"
+              @click="() => removeFormInputField(Number(idx))"
             />
           </div>
         </div>

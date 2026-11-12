@@ -207,7 +207,7 @@ const onSubmit = async ({ errors }: { errors: Record<string, ValidatedError> | u
   // 7.5 深度拷贝表单数据内容
   const cloneInputs = cloneDeep(form.value.inputs)
   const cloneParams = cloneDeep(form.value.params)
-  let params: Record<string, any> = {}
+  const params: Record<string, any> = {}
   cloneParams.forEach((param: Record<string, any>) => {
     params[param.key] = param.value
   })
@@ -637,7 +637,7 @@ onMounted(() => {
                   <a-button
                     size="mini"
                     class="hidden group-hover:block rounded px-1.5 flex-shrink-0"
-                    @click="() => handleSelectTool(builtin_tool_idx, tool_idx)"
+                    @click="() => handleSelectTool(Number(builtin_tool_idx), Number(tool_idx))"
                   >
                     <template #icon>
                       <icon-plus />
@@ -684,7 +684,9 @@ onMounted(() => {
                     <a-button
                       size="mini"
                       class="hidden group-hover:block rounded px-1.5 flex-shrink-0"
-                      @click="() => handleSelectTool(Number(api_tool_provider_idx), tool_idx)"
+                      @click="
+                        () => handleSelectTool(Number(api_tool_provider_idx), Number(tool_idx))
+                      "
                     >
                       <template #icon>
                         <icon-plus />

@@ -7,7 +7,13 @@ import { useUpdateDraftAppConfig } from '@/hooks/use-app'
 // 1.定义自定义组件所需数据
 const props = defineProps({
   app_id: { type: String, default: '', required: true },
-  model_config: { type: Object, default: {}, required: true },
+  model_config: {
+    type: Object,
+    default: () => {
+      return {}
+    },
+    required: true,
+  },
   dialog_round: { type: Number, default: 3, required: true },
 })
 const emits = defineEmits(['update:model_config'])
@@ -124,8 +130,8 @@ onMounted(() => {
         <div class="flex flex-col gap-2 mb-2">
           <div class="text-gray-700">模型</div>
           <a-select
-            :options="modelOptions"
             v-model:model-value="form.selectValue"
+            :options="modelOptions"
             size="small"
             class="rounded-lg mb-2"
             placeholder="请选择Agent使用的大语言模型"
@@ -167,6 +173,7 @@ onMounted(() => {
         <a-spin :loading="getLanguageModelLoading" class="w-full">
           <div
             v-for="parameter in language_model?.parameters"
+            :key="parameter.name"
             class="flex items-center gap-2 h-8 mb-4"
           >
             <!-- 字段标签 -->

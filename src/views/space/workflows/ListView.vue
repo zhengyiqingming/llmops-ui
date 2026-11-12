@@ -11,7 +11,7 @@ const route = useRoute()
 const props = defineProps({
   createType: { type: String, default: '', required: true }, //该变量在父组件已定义，此处引用
 })
-const emits = defineEmits(['update-create-type']) //该事件在父组件已定义，此处引用
+const emits = defineEmits(['update:create-type'])
 const createOrUpdateWorkflowModalVisible = ref(false)
 const updateWorkflowId = ref('')
 const accountStore = useAccountStore()
@@ -46,8 +46,8 @@ watch(
   (newValue) => {
     if (newValue === 'workflow') {
       updateWorkflowId.value = ''
-      createOrUpdateWorkflowModalVisible.value = true
-      emits('update-create-type', '')
+      createOrUpdateWorkflowModalVisible.value = true // 1. 打开弹窗
+      emits('update:create-type', '') // 2. 立刻通知父组件把状态重置为 ''
     }
   },
 )

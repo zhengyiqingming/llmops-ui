@@ -8,7 +8,7 @@ export const unescapeString = (str: string): string => {
     .replace(/\\t/g, '\t')
     .replace(/\\r/g, '\r')
     .replace(/\\'/g, "'")
-    .replace(/\\"/g, '\"')
+    .replace(/\\"/g, '"')
     .replace(/\\\\/g, '\\')
 }
 
@@ -28,7 +28,7 @@ export const generateRandomString = (length: number): string => {
 // 构建邻接表，邻接表的key为节点的id，值为该节点的所有直接子节点(后继节点)
 export const buildAdjList = (edges: GraphEdge[]): Map<string, string[]> => {
   // 1.构建邻接表，类型为映射
-  let adjList = new Map<string, string[]>()
+  const adjList = new Map<string, string[]>()
 
   // 2.循环遍历所有边信息
   edges.forEach((edge) => {
@@ -45,7 +45,7 @@ export const buildAdjList = (edges: GraphEdge[]): Map<string, string[]> => {
 // 构建逆邻接表，逆邻接表的key是每个节点的id，值为该节点的直接父节点
 export const buildReverseAdjList = (edges: GraphEdge[]): Map<string, string[]> => {
   // 1.构建逆邻接表，类型为映射
-  let reverseAdjList = new Map<string, string[]>()
+  const reverseAdjList = new Map<string, string[]>()
 
   // 2.循环遍历所有边信息
   edges.forEach((edge) => {
@@ -97,7 +97,7 @@ export const getPredecessorsByNodeId = (
 export const getReferencedVariables = (
   nodes: GraphNode[],
   edges: GraphEdge[],
-  target_node_id: str,
+  target_node_id: string,
 ): Record<string, any>[] => {
   // 2.1 构建逆邻接表
   const reverseAdjList = buildReverseAdjList(edges)
@@ -109,22 +109,22 @@ export const getReferencedVariables = (
   const predecessorNodes = nodes.filter((node) => predecessors.includes(node.id))
 
   // 2.4 遍历节点，提取输出数据变量列表
-  const options = []
+  const options: any[] = []
   predecessorNodes.forEach((node) => {
     // 2.5 创建节点变量列表
     const node_variables = {
       isGroup: true,
       label: node.data.title,
-      options: [],
+      options: [] as any,
     }
 
     // 2.6 根据节点的差异取出可以引用的数据
     if (node.type === 'start') {
-      node.data?.inputs.forEach((variable) => {
+      node.data?.inputs.forEach((variable: any) => {
         node_variables.options.push({ label: variable.name, value: `${node.id}/${variable.name}` })
       })
     } else {
-      node.data?.outputs.forEach((variable) => {
+      node.data?.outputs.forEach((variable: any) => {
         node_variables.options.push({
           label: `${variable.name}`,
           value: `${node.id}/${variable.name}`,

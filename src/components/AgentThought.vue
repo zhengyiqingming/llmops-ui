@@ -5,7 +5,11 @@ import { QueueEvent } from '@/config'
 // 1.定义自定义组件所需数据
 const props = defineProps({
   loading: { type: Boolean, default: false, required: true },
-  agent_thoughts: { type: Array as PropType<Record<string, any>[]>, default: [], required: true },
+  agent_thoughts: {
+    type: Array as PropType<Record<string, any>[]>,
+    default: () => [],
+    required: true,
+  },
 })
 const visible = ref(false)
 </script>
@@ -71,8 +75,7 @@ const visible = ref(false)
             智能体消息
           </div>
         </template>
-        <template #extra
-          ><!--保留两位小数-->
+        <template #extra>
           <div class="text-gray-500">{{ agent_thought.latency.toFixed(2) }}s</div>
         </template>
         <div
