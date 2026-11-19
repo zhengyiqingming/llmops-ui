@@ -15,7 +15,7 @@ RUN yarn install
 COPY . .
 
 #配置环境变量
-ENV VITE_API_PREFIX=http://192.168.70.128:5001
+ENV VITE_API_PREFIX=/api
 
 # 构建/编译项目,在根目录生成dist文件,这些命令全都是在 Docker 内部的 /app/web 目录下执行的，生成的 dist 文件 ，全都存在 Docker 内部的硬盘里。
 RUN yarn build
@@ -35,7 +35,7 @@ RUN find /usr/share/nginx/html -type d -exec chmod 755 {} \;
 # 设置文件权限为 644，确保文件可以读但不可执行
 RUN find /usr/share/nginx/html -type f -exec chmod 644 {} \;
 
-# 暴露 80 端口号
+# 暴露 3000 端口号，将80端口留给nginx
 EXPOSE 3000
 
 # 启动 Nginx
