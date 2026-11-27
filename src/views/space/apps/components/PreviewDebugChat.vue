@@ -40,6 +40,9 @@ const props = defineProps({
   opening_questions: { type: Array as PropType<string[]>, default: () => [], required: true },
 })
 const query = ref('')
+const image_urls = ref<string[]>([])
+const fileInput = ref<any>(null)
+const uploadFileLoading = ref(false)
 const message_id = ref('')
 const task_id = ref('')
 
@@ -218,7 +221,40 @@ const handleSubmitQuestion = async (question: string) => {
   await handleSubmit()
 }
 
-// 8.页面DOM加载完毕时初始化数据
+// 8.定义文件上传触发器
+const triggerFileInput = () => {
+  // 1.检测上传的图片数量是否超过5
+  if (image_urls.value.length >= 5) {
+    Message.error('对话上传图片数量不能超过5张')
+    return
+  }
+
+  // 2.满足条件触发上传
+  fileInput.value.click()
+}
+
+// 9.定义文件变化监听器
+const handleFileChange = async (event: Event) => {
+  // 1.判断是否在上传中
+  if (uploadFileLoading.value) return
+
+  // 2.获取当前选中的图片
+  const input = event.target as HTMLInputElement
+  const selectedFile = input.files?.[0]
+  if (selectedFile) {
+    try {
+      // 3.调用API接口上传图片
+      uploadFileLoading.value = true
+      const resp = await uploadImage(selectedFile)
+      image_urls.value.push(resp.data.image_url)
+      Message.success('上传图片成功')
+    } finally {
+      uploadFileLoading.value = false
+    }
+  }
+}
+
+// 10.页面DOM加载完毕时初始化数据
 onMounted(async () => {
   await loadDebugConversationMessages(String(route.params?.app_id), true)
 
@@ -329,20 +365,62 @@ onMounted(async () => {
         </a-button>
         <!-- 输入框组件 -->
         <div
-          class="h-[50px] flex items-center gap-2 px-4 flex-1 border border-gray-200 rounded-full"
+          :class="`${image_urls.length > 0 ? 'h-[100px]' : 'h-[50px]'} flex flex-col justify-center gap-2 px-4 flex-1 border border-gray-200 rounded-[24px]`"
         >
-          <input v-model="query" type="text" class="flex-1 outline-0" @keyup.enter="handleSubmit" />
-          <a-button
-            :loading="debugChatLoading"
-            type="text"
-            shape="circle"
-            class="!text-gray-700"
-            @click="handleSubmit"
-          >
-            <template #icon>
-              <icon-send :size="16" />
-            </template>
-          </a-button>
+          <!-- 图片列表 -->
+          <div v-if="image_urls.length > 0" class="flex items-center gap-2">
+            <div
+              v-for="(image_url, idx) in image_urls"
+              :key="image_url"
+              class="w-10 h-10 relative rounded-lg overflow-hidden group cursor-pointer"
+            >
+              <a-avatar shape="square" :image-url="image_url" />
+              <div
+                class="hidden group-hover:flex items-center justify-center bg-gray-700/50 w-10 h-10 absolute top-0"
+              >
+                <icon-close class="text-white" @click="() => image_urls.splice(idx, 1)" />
+              </div>
+            </div>
+          </div>
+          <div class="flex items-center gap-2">
+            <input
+              v-model="query"
+              type="text"
+              class="flex-1 outline-0"
+              @keyup.enter="handleSubmit"
+            />
+            <!-- 上传图片输入框 -->
+            <input
+              type="file"
+              ref="fileInput"
+              accept="image/*"
+              @change="handleFileChange"
+              class="hidden"
+            />
+            <a-button
+              :loading="uploadFileLoading"
+              size="mini"
+              type="text"
+              shape="circle"
+              class="!text-gray-700"
+              @click="triggerFileInput"
+            >
+              <template #icon>
+                <icon-plus />
+              </template>
+            </a-button>
+            <a-button
+              :loading="debugChatLoading"
+              type="text"
+              shape="circle"
+              class="!text-gray-700"
+              @click="handleSubmit"
+            >
+              <template #icon>
+                <icon-send :size="16" />
+              </template>
+            </a-button>
+          </div>
         </div>
       </div>
       <!-- 底部提示信息 -->
